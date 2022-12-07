@@ -1,10 +1,10 @@
-#include"ObjLoader.h"
+#include"ObjParser.h"
 #include<GL/glut.h>
-//#include<stdio.h>
+#include<stdio.h>
 #include<windows.h>
-//#include<string.h>
+#include<string.h>
 #include<math.h>
-//#include <GLAUX.H>
+
 
 #define PI 3.1415926
 
