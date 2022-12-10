@@ -16,6 +16,8 @@ volatile float fps;
 
 /* texture mapping set variable */
 GLuint textureMonkey;
+GLuint texturefront;
+GLuint textureback;
 GLuint textureObj;
 
 bool antialiase_on = true;
@@ -27,6 +29,8 @@ double up[3] = { 0, 1, 0 };
 
 // object var
 ObjParser *monkey;
+ObjParser* body_back;
+ObjParser* body_front;
 ObjParser *obj1, *obj2, *obj3;
 
 // user-defined function
@@ -65,11 +69,12 @@ int main(int argc, char** argv)
 	add_menu();
 
 	// 리소스 로드
-	monkey = new ObjParser("monkey.obj");
-	obj1 = new ObjParser("1.obj");
-	obj3 = new ObjParser("3.obj");
+	monkey = new ObjParser("obj/monkey.obj");
+	body_front = new ObjParser("obj/testfrontbody.obj");
+	body_back = new ObjParser("obj/real_body_back_rec.obj");
 
-	//monkey->write("test3.obj");
+	monkey->write("test3.obj");
+	body_back->write("body_back_test.obj");
 	/* Create a single window with a keyboard and display callback */
 	glutMouseFunc(&mouse);
 	glutMouseWheelFunc(&mouseWheel);
@@ -147,7 +152,7 @@ void light_default() {
 
 void setTextureMapping() {
 	int imgWidth, imgHeight, channels;
-	uchar* img = readImageData("monkey.bmp", &imgWidth, &imgHeight, &channels);
+	uchar* img = readImageData("bmp/monkey.bmp", &imgWidth, &imgHeight, &channels);
 
 	int texNum = 1;
 	glGenTextures(texNum, &textureMonkey);
@@ -160,9 +165,21 @@ void setTextureMapping() {
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 	//gluBuild2DMipmaps(GL_TEXTURE_2D, 3, imgWidth, imgHeight, GL_RGB, GL_UNSIGNED_BYTE, img);
 
-	img = readImageData("obj1.bmp", &imgWidth, &imgHeight, &channels);
-	glGenTextures(texNum, &textureObj);
-	glBindTexture(GL_TEXTURE_2D, textureObj);
+	texNum = 2;
+	img = readImageData("bmp/front_body.bmp", &imgWidth, &imgHeight, &channels);
+	glGenTextures(texNum, &texturefront);
+	glBindTexture(GL_TEXTURE_2D, texturefront);
+	glTexImage2D(GL_TEXTURE_2D, 0, 3, imgWidth, imgHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, img);
+	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);	//GL_REPEAT 둘중 하나 선택
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+	texNum = 3;
+	img = readImageData("bmp/front_back_rec_uv.bmp", &imgWidth, &imgHeight, &channels);
+	glGenTextures(texNum, &texturefront);
+	glBindTexture(GL_TEXTURE_2D, texturefront);
 	glTexImage2D(GL_TEXTURE_2D, 0, 3, imgWidth, imgHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, img);
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);	//GL_REPEAT 둘중 하나 선택
@@ -303,7 +320,7 @@ void draw_obj_with_texture(ObjParser *objParser)
 	glDisable(GL_BLEND);
 	// glEnable(GL_TEXTURE_2D);	// texture 색 보존을 위한 enable
 	glBindTexture(GL_TEXTURE_2D, textureMonkey);
-	//glBindTexture(GL_TEXTURE_2D, textureObj);
+	glBindTexture(GL_TEXTURE_2D, texturefront);
 	glBegin(GL_TRIANGLES);
 	for (unsigned int n = 0; n < objParser->getFaceSize(); n += 3) {
 		glTexCoord2f(objParser->textures[objParser->textureIdx[n] - 1].x,
@@ -476,22 +493,29 @@ void draw()
 	glColor3f(1.f, 1.f, 1.f);
 	//glutWireSphere(2, 50, 50);
 	GLfloat tmp[16];
-	draw_obj_with_texture(monkey);
+	//draw_obj_with_texture(monkey);
 	//draw_obj(monkey);
+	glPushMatrix();
+	glTranslatef(3, 3, 3);
+	//glScalef(13,13,13);
+	//draw_obj(body_back);
+	draw_obj_with_texture(body_back);
+	glPopMatrix();
 	//draw_obj(obj3);
 	//draw_cube_textures();
 	//draw_textureCube();
 	glPopMatrix();
 
-	//glPushMatrix();
-	//glTranslatef(-3.f, 0.f, 0.f);
-	//glGetFloatv(GL_MODELVIEW_MATRIX, tmp);
-	//glPopMatrix();
+	glPushMatrix();
+	glTranslatef(-3.f, 0.f, 0.f);
+	glGetFloatv(GL_MODELVIEW_MATRIX, tmp);
+	glPopMatrix();
 
-	//glPushMatrix();
-	//glLoadMatrixf(tmp);
+	glPushMatrix();
+	glLoadMatrixf(tmp);
 	//draw_obj_with_texture(monkey);
-	//glPopMatrix();
+	//draw_obj_with_texture(body_front);
+	glPopMatrix();
 	
 	glutSwapBuffers();
 	glFlush();

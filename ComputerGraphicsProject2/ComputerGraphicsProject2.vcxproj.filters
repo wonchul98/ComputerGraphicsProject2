@@ -26,10 +26,10 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\..\OneDrive\바탕 화면\학교\3-2학기\컴퓨터 그래픽스\ObjParser\ObjParser.h">
+    <ClInclude Include="bmpfuncs.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="bmpfuncs.h">
+    <ClInclude Include="..\..\..\..\Desktop\학교\3학년 2학기\컴퓨터 그래픽스\ObjParser\ObjParser.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
   </ItemGroup>
