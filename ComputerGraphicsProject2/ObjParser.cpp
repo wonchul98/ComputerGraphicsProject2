@@ -26,6 +26,7 @@ double theta = 45, phi = 45;
 double cam[3];
 double center[3] = { 0, 0, 0 };
 double up[3] = { 0, 1, 0 };
+int draw_number = 0;
 
 // object var
 ObjParser *monkey;
@@ -70,11 +71,12 @@ int main(int argc, char** argv)
 
 	// 리소스 로드
 	monkey = new ObjParser("obj/monkey.obj");
-	body_front = new ObjParser("obj/testfrontbody.obj");
+	body_front = new ObjParser("obj/body_front.obj");
 	body_back = new ObjParser("obj/real_body_back_rec.obj");
 
 	monkey->write("test3.obj");
 	body_back->write("body_back_test.obj");
+	body_front->write("body_front_test.obj");
 	/* Create a single window with a keyboard and display callback */
 	glutMouseFunc(&mouse);
 	glutMouseWheelFunc(&mouseWheel);
@@ -152,21 +154,11 @@ void light_default() {
 
 void setTextureMapping() {
 	int imgWidth, imgHeight, channels;
-	uchar* img = readImageData("bmp/monkey.bmp", &imgWidth, &imgHeight, &channels);
-
-	int texNum = 1;
-	glGenTextures(texNum, &textureMonkey);
-	glBindTexture(GL_TEXTURE_2D, textureMonkey);
-	glTexImage2D(GL_TEXTURE_2D, 0, 3, imgWidth, imgHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, img);
-	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);	//GL_REPEAT 둘중 하나 선택
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	
 	//gluBuild2DMipmaps(GL_TEXTURE_2D, 3, imgWidth, imgHeight, GL_RGB, GL_UNSIGNED_BYTE, img);
 
-	texNum = 2;
-	img = readImageData("bmp/front_body.bmp", &imgWidth, &imgHeight, &channels);
+	int texNum = 1;
+	uchar* img = readImageData("bmp/body_front_uv.bmp", &imgWidth, &imgHeight, &channels);
 	glGenTextures(texNum, &texturefront);
 	glBindTexture(GL_TEXTURE_2D, texturefront);
 	glTexImage2D(GL_TEXTURE_2D, 0, 3, imgWidth, imgHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, img);
@@ -176,10 +168,10 @@ void setTextureMapping() {
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
-	texNum = 3;
+	texNum = 2;
 	img = readImageData("bmp/front_back_rec_uv.bmp", &imgWidth, &imgHeight, &channels);
-	glGenTextures(texNum, &texturefront);
-	glBindTexture(GL_TEXTURE_2D, texturefront);
+	glGenTextures(texNum, &textureback);
+	glBindTexture(GL_TEXTURE_2D, textureback);
 	glTexImage2D(GL_TEXTURE_2D, 0, 3, imgWidth, imgHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, img);
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);	//GL_REPEAT 둘중 하나 선택
@@ -319,8 +311,13 @@ void draw_obj_with_texture(ObjParser *objParser)
 {
 	glDisable(GL_BLEND);
 	// glEnable(GL_TEXTURE_2D);	// texture 색 보존을 위한 enable
-	glBindTexture(GL_TEXTURE_2D, textureMonkey);
-	glBindTexture(GL_TEXTURE_2D, texturefront);
+	if (draw_number == 0) {
+		glBindTexture(GL_TEXTURE_2D, texturefront);
+	}
+	if (draw_number == 1){
+		glBindTexture(GL_TEXTURE_2D, textureback);
+	}
+	
 	glBegin(GL_TRIANGLES);
 	for (unsigned int n = 0; n < objParser->getFaceSize(); n += 3) {
 		glTexCoord2f(objParser->textures[objParser->textureIdx[n] - 1].x,
@@ -351,6 +348,7 @@ void draw_obj_with_texture(ObjParser *objParser)
 			objParser->vertices[objParser->vertexIdx[n + 2] - 1].z);
 	}
 	glEnd();
+	
 	glEnable(GL_BLEND);
 }
 
@@ -491,19 +489,22 @@ void draw()
 
 	glPushMatrix();
 	glColor3f(1.f, 1.f, 1.f);
-	//glutWireSphere(2, 50, 50);
+	
 	GLfloat tmp[16];
-	//draw_obj_with_texture(monkey);
-	//draw_obj(monkey);
+	/*DRAW BODY_FRONT*/
 	glPushMatrix();
 	glTranslatef(3, 3, 3);
-	//glScalef(13,13,13);
-	//draw_obj(body_back);
+	draw_number = 0;
+	draw_obj_with_texture(body_front);
+	
+	glPopMatrix();
+	/*DRAW BODY_BACK*/
+	glPushMatrix();
+	glTranslatef(3, 3, 3);
+	draw_number = 1;
 	draw_obj_with_texture(body_back);
 	glPopMatrix();
-	//draw_obj(obj3);
-	//draw_cube_textures();
-	//draw_textureCube();
+
 	glPopMatrix();
 
 	glPushMatrix();
@@ -513,8 +514,6 @@ void draw()
 
 	glPushMatrix();
 	glLoadMatrixf(tmp);
-	//draw_obj_with_texture(monkey);
-	//draw_obj_with_texture(body_front);
 	glPopMatrix();
 	
 	glutSwapBuffers();
