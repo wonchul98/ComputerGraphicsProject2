@@ -1,5 +1,6 @@
 #include <GL/glut.h>
 #include <GL/freeglut.h>
+#include "GL/glext.h"
 #include "ObjParser.h"
 #include "bmpfuncs.h"
 
@@ -29,6 +30,7 @@ GLuint texturepack;
 GLuint texturebattery;
 GLuint texturedirect;
 GLuint texName[6];
+GLuint g_nCubeTex;
 
 GLfloat x;
 GLfloat dx = 0.2;
@@ -43,6 +45,10 @@ int draw_number = 0;
 int move_mode = 0;
 int click = 0;
 bool pack_motion = 0;
+int g_nX, g_nY;
+int g_nSelect = 0;
+float current_width = 500;
+float current_height = 500;
 
 // object var
 ObjParser *monkey;
@@ -73,6 +79,10 @@ void special_keyboard(int, int, int);
 void draw(void);
 void resize(int, int);
 void idle();
+void drawSkybox();
+void envTextureMapping();
+void Picking(int x, int y);
+void print_instruction();
 //...
 
 GLUquadric *quadric;
@@ -342,8 +352,9 @@ void init()
 	glHint(GL_LINE_SMOOTH_HINT, GL_FASTEST);
 	glEnable(GL_LINE_SMOOTH);
 		
+	print_instruction();
 	light_default();
-
+	envTextureMapping();
 	/* TEXTURE MAPPING SET */
 
 	glEnable(GL_TEXTURE_2D);
@@ -368,14 +379,14 @@ void special_keyboard(int key, int x, int y)
 		if(theta < 170) theta += 5;
 	}
 
-	std::cout << "theta : " << theta << ", phi : " << phi << "\n";
+	//std::cout << "theta : " << theta << ", phi : " << phi << "\n";
 	glutPostRedisplay();
 }
 
 /* Keyboard callback function */
 void keyboard(unsigned char key, int x, int y)
 {
-	printf("you pressed %c\n", key);
+	//printf("you pressed %c\n", key);
 	switch (key)
 	{
 		/* Exit on escape key press */
@@ -506,6 +517,15 @@ void keyboard(unsigned char key, int x, int y)
 	{
 		x = 1;
 		pack_motion = !pack_motion;
+		break;
+	}
+
+	case 'r' :
+	{
+		radius = 5;
+		phi = 0;
+		theta = 90;
+		break;
 	}
 
 	
@@ -746,7 +766,7 @@ void draw_textureCube() {
 	glTexCoord2f(0, 1); glVertex3f(1.0, -1.0, -1.0);
 	glEnd();
 
-	draw_axis();
+	//draw_axis();
 }
 
 /* Display callback function */
@@ -763,7 +783,7 @@ void draw()
 	cam[2] = radius * sin(theta*M_PI / 180)*cos(phi*M_PI / 180);
 
 	gluLookAt(cam[0], cam[1], cam[2], center[0], center[1], center[2], up[0], up[1], up[2]);
-
+	drawSkybox();
 	//glDisable(GL_LIGHT1);
 	GLfloat light_position[] = { cam[0],cam[1],cam[2],1.0 };
 	GLfloat light_position2[] = { 0,0,0,1.0 };
@@ -771,7 +791,7 @@ void draw()
 
 	glDisable(GL_TEXTURE_2D);
 	glDisable(GL_LIGHTING);
-	draw_axis();
+	//draw_axis();
 	glEnable(GL_TEXTURE_2D);
 	glEnable(GL_LIGHTING);
 
@@ -950,10 +970,21 @@ void draw()
 void mouse(int button, int state, int x, int y)
 {
 	if (state) {
-		// printf("button(%d), state(%d), x(%d), y(%d)\n", button, state, x, y);
+		printf("button(%d), state(%d), x(%d), y(%d)\n", button, state, x, y);
 	}
 	else {
 		// printf("button(%d), state(%d), x(%d), y(%d)\n", button, state, x, y);
+	}
+	y = current_height - y;
+	if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN)
+	{
+		Picking(x, y);
+		g_nX = x;
+		g_nY = y;
+	}
+	else if (button == GLUT_LEFT_BUTTON && state == GLUT_UP)
+	{
+		g_nSelect = 0;
 	}
 	glutPostRedisplay();
 }
@@ -1021,14 +1052,15 @@ void idle()
 			x = 1;
 			if(pack_motion == 1) pack_motion = !pack_motion;
 		}
-		printf("x: %f\n", x);
-		//printf("fps : %.0f\n", fps);
+		//printf("fps : %.f\n", fps);
 		glutPostRedisplay();
 	}
 }
 
 void resize(int width, int height)
 {
+	current_height = height;
+	current_width = width;
 	printf("resize func called\n");
 	glViewport(0, 0, width, height);
 	glMatrixMode(GL_PROJECTION);
@@ -1046,22 +1078,22 @@ void envTextureMapping() {
 	int sizeX, sizeY, data;
 	glBindTexture(GL_TEXTURE_2D, g_nCubeTex);
 
-	uchar* img0 = readImageData("img/256px.bmp", &sizeX, &sizeY, &data);
+	uchar* img0 = readImageData("bmp/256px.bmp", &sizeX, &sizeY, &data);
 	glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X, 0, GL_RGBA, sizeX, sizeY, 0, GL_RGB, GL_UNSIGNED_BYTE, img0);
 
-	uchar* img1 = readImageData("img/256nx.bmp", &sizeX, &sizeY, &data);
+	uchar* img1 = readImageData("bmp/256nx.bmp", &sizeX, &sizeY, &data);
 	glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_X, 0, GL_RGBA, sizeX, sizeY, 0, GL_RGB, GL_UNSIGNED_BYTE, img1);
 
-	uchar* img2 = readImageData("img/256ny.bmp", &sizeX, &sizeY, &data);
+	uchar* img2 = readImageData("bmp/256ny.bmp", &sizeX, &sizeY, &data);
 	glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_Y, 0, GL_RGBA, sizeX, sizeY, 0, GL_RGB, GL_UNSIGNED_BYTE, img2);
 
-	uchar* img3 = readImageData("img/256py.bmp", &sizeX, &sizeY, &data);
+	uchar* img3 = readImageData("bmp/256py.bmp", &sizeX, &sizeY, &data);
 	glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_Y, 0, GL_RGBA, sizeX, sizeY, 0, GL_RGB, GL_UNSIGNED_BYTE, img3);
 
-	uchar* img4 = readImageData("img/256nz.bmp", &sizeX, &sizeY, &data);
+	uchar* img4 = readImageData("bmp/256nz.bmp", &sizeX, &sizeY, &data);
 	glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_Z, 0, GL_RGBA, sizeX, sizeY, 0, GL_RGB, GL_UNSIGNED_BYTE, img4);
 
-	uchar* img5 = readImageData("img/256pz.bmp", &sizeX, &sizeY, &data);
+	uchar* img5 = readImageData("bmp/256pz.bmp", &sizeX, &sizeY, &data);
 	glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_Z, 0, GL_RGBA, sizeX, sizeY, 0, GL_RGB, GL_UNSIGNED_BYTE, img5);
 
 	/*텍스처 속성 지정*/
@@ -1072,4 +1104,147 @@ void envTextureMapping() {
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
+}
+
+void drawSkybox() {
+	float g_nSkySize = 256;
+	/* sky box  그리기 */
+	glDisable(GL_LIGHTING);
+	glEnable(GL_TEXTURE_CUBE_MAP);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, g_nCubeTex);
+
+	glBegin(GL_QUADS);
+	// px
+	//glNormal3f(-1.0, 0, 0);
+	glTexCoord3d(1.0, -1.0, -1.0);
+	glVertex3f(g_nSkySize, -g_nSkySize, -g_nSkySize);
+	glTexCoord3d(1.0, -1.0, 1.0);
+	glVertex3f(g_nSkySize, -g_nSkySize, g_nSkySize);
+	glTexCoord3d(1.0, 1.0, 1.0);
+	glVertex3f(g_nSkySize, g_nSkySize, g_nSkySize);
+	glTexCoord3d(1.0, 1.0, -1.0);
+	glVertex3f(g_nSkySize, g_nSkySize, -g_nSkySize);
+	glEnd();
+	//nx
+	glBegin(GL_QUADS);
+	//glNormal3f(1.0, 0, 0);
+	glTexCoord3d(-1.0, -1.0, -1.0);
+	glVertex3f(-g_nSkySize, -g_nSkySize, -g_nSkySize);
+	glTexCoord3d(-1.0, -1.0, 1.0);
+	glVertex3f(-g_nSkySize, -g_nSkySize, g_nSkySize);
+	glTexCoord3d(-1.0, 1.0, 1.0);
+	glVertex3f(-g_nSkySize, g_nSkySize, g_nSkySize);
+	glTexCoord3d(-1.0, 1.0, -1.0);
+	glVertex3f(-g_nSkySize, g_nSkySize, -g_nSkySize);
+	glEnd();
+	//py
+	glBegin(GL_QUADS);
+	//glNormal3f(0, -1, 0);
+	glTexCoord3d(1.0, 1.0, -1.0);
+	glVertex3f(g_nSkySize, g_nSkySize, -g_nSkySize);
+	glTexCoord3d(1.0, 1.0, 1.0);
+	glVertex3f(g_nSkySize, g_nSkySize, g_nSkySize);
+	glTexCoord3d(-1.0, 1.0, 1.0);
+	glVertex3f(-g_nSkySize, g_nSkySize, g_nSkySize);
+	glTexCoord3d(-1.0, 1.0, -1.0);
+	glVertex3f(-g_nSkySize, g_nSkySize, -g_nSkySize);
+	glEnd();
+	//ny
+	glBegin(GL_QUADS);
+	//glNormal3f(0, 1, 0);
+	glTexCoord3d(1.0, -1.0, 1.0);
+	glVertex3f(g_nSkySize, -g_nSkySize, g_nSkySize);
+	glTexCoord3d(-1.0, -1.0, 1.0);
+	glVertex3f(-g_nSkySize, -g_nSkySize, g_nSkySize);
+	glTexCoord3d(-1.0, -1.0, -1.0);
+	glVertex3f(-g_nSkySize, -g_nSkySize, -g_nSkySize);
+	glTexCoord3d(1.0, -1.0, -1.0);
+	glVertex3f(g_nSkySize, -g_nSkySize, -g_nSkySize);
+	glEnd();
+	//pz
+
+	glBegin(GL_QUADS);
+	//glNormal3f(0, 0, 1);
+	glTexCoord3d(1.0, 1.0, 1.0);
+	glVertex3f(g_nSkySize, g_nSkySize, g_nSkySize);
+	glTexCoord3d(1.0, -1.0, 1.0);
+	glVertex3f(g_nSkySize, -g_nSkySize, g_nSkySize);
+	glTexCoord3d(-1.0, -1.0, 1.0);
+	glVertex3f(-g_nSkySize, -g_nSkySize, g_nSkySize);
+	glTexCoord3d(-1.0, 1.0, 1.0);
+	glVertex3f(-g_nSkySize, g_nSkySize, g_nSkySize);
+	glEnd();
+	//nz
+
+	glBegin(GL_QUADS);
+	//glNormal3f(0, 0, 1);
+	glTexCoord3d(1.0, 1.0, -1.0);
+	glVertex3f(g_nSkySize, g_nSkySize, -g_nSkySize);
+	glTexCoord3d(1.0, -1.0, -1.0);
+	glVertex3f(g_nSkySize, -g_nSkySize, -g_nSkySize);
+	glTexCoord3d(-1.0, -1.0, -1.0);
+	glVertex3f(-g_nSkySize, -g_nSkySize, -g_nSkySize);
+	glTexCoord3d(-1.0, 1.0, -1.0);
+	glVertex3f(-g_nSkySize, g_nSkySize, -g_nSkySize);
+	glEnd();
+	glDisable(GL_TEXTURE_CUBE_MAP);
+}
+
+void Picking(int x, int y)
+{
+	GLuint selectBuf[256];
+	glSelectBuffer(256, selectBuf);
+	// first step
+	glRenderMode(GL_SELECT);
+	// second step
+	glInitNames();
+	// third step
+	glPushName(selectBuf[0]);
+	// third step
+	glLoadIdentity();
+	GLint viewport[4];
+	glGetIntegerv(GL_VIEWPORT, viewport);
+	glMatrixMode(GL_PROJECTION);
+	glPushMatrix();
+	glLoadIdentity();
+	// fourth step
+	gluPickMatrix(x, y, 0.1, 0.1, viewport);
+	glOrtho(-current_width / 2.0f, current_width / 2.0f, -current_height / 2.0f, current_height / 2.0f, -100, 100);
+	glMatrixMode(GL_MODELVIEW);
+	glPushMatrix();
+	//DrawSphere();
+	glPopMatrix();
+	glMatrixMode(GL_PROJECTION);
+	glPopMatrix();
+	glFlush();
+	// sixth step
+	GLint hits = glRenderMode(GL_RENDER);
+	if (hits <= 0) return;
+	int stack = selectBuf[0];
+	unsigned int zMin = selectBuf[1];
+	unsigned int zMax = selectBuf[2];
+	g_nSelect = selectBuf[3];
+	int index = 3 + stack;
+	int i;
+	for (i = 1; i < hits; i++) {
+		stack = selectBuf[index];
+		if (zMin < selectBuf[index + 1]) {
+			zMin = selectBuf[index + 1];
+			g_nSelect = selectBuf[index + 3];
+		}
+		index += 3 + stack;
+	}
+	printf("hits: %d\nzMin: %u\nzMax: %u\ng_nselect: %d\n", hits, zMin, zMax, g_nSelect);
+}
+
+void print_instruction() {
+	printf("방향키 : 시점 이동\n");
+	printf("마우스 휠 : 시점 이동\n");
+	printf("숫자 키 : \n\t1: 본체 앞판, 2: 본체 뒷판, 3: 보드 앞판\n\t4: 보드 뒷판, ");
+	printf("5: 배터리, 6: 스크린\n\t7: A/B 버튼, ㅂ방향키 버튼, 8: start/select 버튼, 9: 게임 팩\n");
+	printf("\t0: 부품 원 위치");
+	printf("p: 팩 삽입\n");
+	printf("q: 안티 앨리어싱 on/off\n");
+	printf("r: 정면 보기\n");
+	printf("버튼 클릭: \n\t방향키: w,a,s,d \n\tA/B키: k,l \n\tstart/select: n,m\n");
 }
